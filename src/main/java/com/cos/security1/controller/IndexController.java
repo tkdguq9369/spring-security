@@ -27,17 +27,17 @@ public class IndexController {
     }
 
     @GetMapping("/user")
-    public String user() {
+    public @ResponseBody String user() {
         return "user";
     }
 
     @GetMapping("/admin")
-    public String admin() {
+    public @ResponseBody String admin() {
         return "admin";
     }
 
     @GetMapping("/manager")
-    public String manager() {
+    public @ResponseBody String manager() {
         return "manager";
     }
 
