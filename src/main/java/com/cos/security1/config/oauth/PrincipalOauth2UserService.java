@@ -2,8 +2,12 @@ package com.cos.security1.config.oauth;
 
 import com.cos.security1.config.auth.PrincipalDetails;
 import com.cos.security1.config.auth.PrincipalDetailsService;
+import com.cos.security1.config.oauth.provider.FacebookUserInfo;
+import com.cos.security1.config.oauth.provider.GoogleUserInfo;
+import com.cos.security1.config.oauth.provider.OAuth2UserInfo;
 import com.cos.security1.model.User;
 import com.cos.security1.repository.UserRepository;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -39,17 +43,29 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
         // userRequest 정보 -> loaduser함수 호출 -> 구글로부터 회원프로필 받아줌
         log.info("oAuth2User.getAttributes()={}", oAuth2User.getAttributes());
 
-        String provider = userRequest.getClientRegistration().getClientId(); // google
-        String providerId = String.valueOf(oAuth2User.getAttributes().get("sub"));
+        OAuth2UserInfo oAuth2UserInfo = null;
+
+        if(userRequest.getClientRegistration().getRegistrationId().equals("google")){
+            log.info("구글 로그인 요청");
+            oAuth2UserInfo = new GoogleUserInfo(oAuth2User.getAttributes());
+        }else if(userRequest.getClientRegistration().getRegistrationId().equals("facebook")){
+            log.info("페이스북 로그인 요청");
+            oAuth2UserInfo = new FacebookUserInfo(oAuth2User.getAttributes());
+        }else {
+            log.info("구글과 페이스북 로그인만 지원합니다.");
+        }
+        
+        String provider = oAuth2UserInfo.getProvider();
+        String providerId = oAuth2UserInfo.getProviderId();
         String username = provider + "_" + providerId;
         String password = bCryptPasswordEncoder.encode("겟인데어");
-        String email = String.valueOf(oAuth2User.getAttributes().get("email"));
+        String email = oAuth2UserInfo.getEmail();
         String role = "ROLE_USER";
 
         User user = userRepository.findByUsername(username);
 
         if (user == null) {
-            log.info("구글 로그인이 최초입니다.");
+            log.info("{} 로그인이 최초입니다.", oAuth2UserInfo.getProvider());
             user = User.builder()
                     .username(username)
                     .password(password)
@@ -60,7 +76,7 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
                     .build();
             userRepository.save(user);
         } else {
-            log.info("구글 로그인을 이미 하였습니다.");
+            log.info("{} 로그인을 이미 하였습니다.", oAuth2UserInfo.getProvider());
         }
 
 
